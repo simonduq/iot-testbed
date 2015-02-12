@@ -196,10 +196,13 @@ def status():
   if curr_job == None:
     print "No job currently active"
   else:
-    date_str = datetime.datetime.fromtimestamp(curr_job_date).strftime('%Y-%m-%d %H:%M:%S')
-    print "Currently active job: %u, owned by %s, started %s" %(curr_job, curr_job_owner, date_str)
+    curr_job_date = datetime.datetime.fromtimestamp(curr_job_date).strftime('%Y-%m-%d %H:%M:%S')
+    print "Currently active job: %u, owned by %s, started %s" %(curr_job, curr_job_owner, curr_job_date)
+  process = subprocess.Popen(['date', '+%s%N'], stdout=subprocess.PIPE)
+  out, err = process.communicate()
+  curr_date = out.rstrip()
   # check current date on all nodes
-  if pssh(os.path.join(TESTBED_SCRIPTS_PATH, "all-hosts"), "check-date.sh `date +%s%N`", "Testing connectivity with all nodes", inline=True) != 0:
+  if pssh(os.path.join(TESTBED_SCRIPTS_PATH, "all-hosts"), "check-date.sh %s"%(curr_date), "Testing connectivity with all nodes", inline=True) != 0:
     sys.exit(1)
 
 def list():
