@@ -126,7 +126,7 @@ def create(name, platform, hosts, copy_from, do_start):
   # if name is not set, use either the copy-from dir name or "noname"
   if name == None:
     if copy_from != None:
-      name = os.path.basename(copy_from)
+      name = os.path.basename(copy_from).split('.')[0]
     else:
       name = "noname"
   # check validity of name
@@ -173,7 +173,13 @@ def create(name, platform, hosts, copy_from, do_start):
   job_dir = os.path.join(HOME, "jobs", "%u_%s" %(job_id, name))
   # initialize job directory from copy_from command line parameter
   if copy_from != None:
-    shutil.copytree(copy_from, job_dir)
+    if os.path.isdir(copy_from):
+      # copy full directory
+      shutil.copytree(copy_from, job_dir)
+    else:
+      # copy single file
+      os.makedirs(job_dir)
+      shutil.copyfile(copy_from, os.path.join(job_dir, os.path.basename(copy_from)))
   else:
     os.makedirs(job_dir)
   # create host file in job directory
@@ -354,8 +360,8 @@ def usage():
   print "reboot          'reboot the PI nodes (for maintenance purposes -- use with care)'"
   print 
   print "Usage of create:"
-  print "$testbed.py create [--copy-from DIR] [--name NAME] [--platform PLATFORM] [--hosts HOSTS] [--start]"
-  print "--copy-from     'initialize job directory with content from DIR'"
+  print "$testbed.py create [--copy-from PATH] [--name NAME] [--platform PLATFORM] [--hosts HOSTS] [--start]"
+  print "--copy-from     'initialize job directory with content from PATH (if PATH is a directory) or with file PATH (otherwise)'"
   print "--name          'set the job name (no spaces)'"
   print "--platform      'set a platform for the job (must be a folder in %s)'"%(TESTBED_SCRIPTS_PATH)
   print "--hosts         'set the hostfile containing all PI host involved in the job'"
