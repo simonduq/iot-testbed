@@ -30,6 +30,7 @@ job_id = None
 hosts = None  
 do_start = False
 do_force = False
+do_no_download = False
   
 TESTBED_PATH = "/usr/testbed"
 TESTBED_SCRIPTS_PATH = os.path.join(TESTBED_PATH, "scripts")
@@ -318,8 +319,9 @@ def stop(do_force):
     print "Platform stop script %s failed!"%(stop_script_path)
     if not do_force:
       sys.exit(1)
-  # download logs before stopping
-  download()
+  if not do_no_download:
+    # download logs before stopping
+    download()
   # on all PI nodes: cleanup
   if pssh(hosts_path, "cleanup.sh %s"%(os.path.basename(job_dir)), "Cleaning up the PI nodes") != 0:
     if not do_force:
@@ -372,8 +374,9 @@ def usage():
   print "--job-id        'the unique job id (obtained at creation)'"
   print
   print "Usage of stop:"
-  print "$testbed.py stop [--force]"
+  print "$testbed.py stop [--force] [--no-download]"
   print "--force         'stop the job even if uninstall scripts fail'"
+  print "--no-download   'do not download the logs before stopping'"
   print
   print "Usage of status, list, download, stop, reboot:"
   print "These commands use no parameter."
@@ -391,7 +394,7 @@ if __name__=="__main__":
     sys.exit(1)
   
   try:
-    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "job-id=", "start", "force"] ) 
+    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "job-id=", "start", "force", "no-download"] ) 
   except getopt.GetoptError:
     usage()
 
@@ -412,7 +415,9 @@ if __name__=="__main__":
        do_start = True
    elif opt == "--force":
        do_force = True
-       
+   elif opt == "--no-download":
+       do_no_download = True
+         
   if command == "create":
       create(name, platform, hosts, copy_from, do_start)
   elif command == "status":
