@@ -25,13 +25,16 @@ hosts_path = None
 # value of the command line parameters
 name = None
 platform = None
+duration = None
 copy_from = None
 job_id = None
 hosts = None  
 do_start = False
 do_force = False
 do_no_download = False
-  
+do_start_next = False
+
+MAX_START_ATTEMPTS = 3
 TESTBED_PATH = "/usr/testbed"
 TESTBED_SCRIPTS_PATH = os.path.join(TESTBED_PATH, "scripts")
 CURR_JOB_PATH = os.path.join(TESTBED_PATH, "curr_job")
@@ -109,7 +112,7 @@ def load_curr_job_variables(need_curr_job, need_no_curr_job):
     
 # load all variables related to a given job
 def load_job_variables(job_id):
-  global job_dir, platform, hosts_path
+  global job_dir, platform, hosts_path, duration
   # check if the job exists
   job_dir = get_job_directory(job_id)
   if job_dir == None:
@@ -119,8 +122,12 @@ def load_job_variables(job_id):
   platform = file_read(os.path.join(job_dir, "platform"))
   # get path to the hosts file (list of PI nodes involved)
   hosts_path = os.path.join(job_dir, "hosts")
+  # get path to the duration file
+  duration_path = os.path.join(job_dir, "duration")
+  duration = file_read(os.path.join(job_dir, "duration"))
+  if duration != None: duration = int(duration)
 
-def create(name, platform, hosts, copy_from, do_start):
+def create(name, platform, hosts, copy_from, do_start, duration):
   # if do_start is set, first check that there is no job active
   if do_start:
     load_curr_job_variables(False, True)
@@ -157,6 +164,11 @@ def create(name, platform, hosts, copy_from, do_start):
   if not os.path.isdir(platform_path):
     print "Platform %s not found!" %(platform)
     sys.exit(1)
+
+  # if duration is not set, take it from copy-from
+  if duration == None:
+    if copy_from != None and os.path.isfile(os.path.join(copy_from, "duration")):
+      duration = file_read(os.path.join(copy_from, "duration"))
     
   # read next job ID from 'next_job' file
   next_job_path = os.path.join(TESTBED_PATH, "next_job")
@@ -187,6 +199,9 @@ def create(name, platform, hosts, copy_from, do_start):
   shutil.copyfile(hosts, os.path.join(job_dir, "hosts"))
   # create platform file in job directory
   file_write(os.path.join(job_dir, "platform"), platform + "\n")
+  if duration != None:
+    # create duration file in job directory
+    file_write(os.path.join(job_dir, "duration"), duration + "\n")
   # success: update next_job file
   file_write(next_job_path, "%u\n"%(job_id+1))
   # write creation timestamp
@@ -222,6 +237,9 @@ def list():
         job_id = int(match.group(1))
         job_dir = os.path.join(jobs_dir, f)
         platform = file_read(os.path.join(job_dir, "platform"))
+        duration = file_read(os.path.join(job_dir, "duration"))
+        if duration == None: duration = 999999
+        else: duration = int(duration)
         created = file_read(os.path.join(job_dir, ".created"))
         if created == None: created = "--"
         started = file_read(os.path.join(job_dir, ".started"))
@@ -233,37 +251,67 @@ def list():
           n_log_files = len(filter(lambda x: x.startswith("pi"), os.listdir(logs_path)))
         else:
           n_log_files = 0
-        all_jobs[job_id] = {"dir": f, "platform": platform,
+        all_jobs[job_id] = {"dir": f, "platform": platform, "duration": duration,
                             "created": created, "started": started, "stopped": stopped,
                             "n_log_files": n_log_files}
   for job_id in sorted(all_jobs.keys()):
-    print "{:6d} {:22s} {:12s} created: {:20s} started: {:20s} stopped: {:20s} logs: {:2d}".format(
+    print "{:6d} {:22s} {:12s} duration: {:6d} min created: {:20s} started: {:20s} stopped: {:20s} logs: {:2d} nodes".format(
                   job_id, all_jobs[job_id]['dir'],
-                  all_jobs[job_id]['platform'], all_jobs[job_id]['created'],
+                  all_jobs[job_id]['platform'], all_jobs[job_id]['duration'], all_jobs[job_id]['created'],
                   all_jobs[job_id]['started'], all_jobs[job_id]['stopped'],
                   all_jobs[job_id]['n_log_files']
                   )
   return None
 
+def get_next_job_id():
+  all_jobs = {}
+  jobs_dir = os.path.join(HOME, "jobs")
+  if os.path.isdir(jobs_dir):
+    for f in sorted(os.listdir(jobs_dir)):
+      match = re.search(r'(\d+)_(.*)+', f)
+      if match:
+        job_id = int(match.group(1))
+        job_dir = os.path.join(jobs_dir, f)
+        if not os.path.isfile(os.path.join(job_dir, ".started")):
+		  return job_id
+  return None
+  
 def start(job_id):
+  if job_id == None:
+    job_id = get_next_job_id()
+    if job_id == None:
+	  print "No next job found."
+	  return None
   load_curr_job_variables(False, True)
   load_job_variables(job_id)
   if os.path.exists(os.path.join(job_dir, ".started")):
     print "Job %d was started before!"%(job_id)
     sys.exit(1)
-  # on all PI nodes: prepare
-  if pssh(hosts_path, "prepare.sh %s"%(os.path.basename(job_dir)), "Preparing the PI nodes") != 0:
-    sys.exit(1)
-  # run platform start script
-  start_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "start.py")
-  if os.path.exists(start_script_path) and subprocess.call([start_script_path, job_dir]) != 0:
-    print "Platform start script %s failed, cleanup the PI nodes!"%(start_script_path)
-    # on all PI nodes: cleanup
-    stop_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "stop.py")
-    if os.path.exists(stop_script_path):
-      subprocess.call([stop_script_path, job_dir])
-    pssh(hosts_path, "cleanup.sh %s"%(os.path.basename(job_dir)), "Cleaning up the PI nodes")
-    print "Platform start script %s failed. Try again and reboot the nodes if necessary."%(start_script_path)
+  started = False
+  attempt = 1
+  while not started and attempt <= MAX_START_ATTEMPTS:
+    print "Attempt #%u to start job %u" %(attempt, job_id)
+    # on all PI nodes: prepare
+    if pssh(hosts_path, "prepare.sh %s"%(os.path.basename(job_dir)), "Preparing the PI nodes") == 0:
+      # run platform start script
+      start_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "start.py")
+      if os.path.exists(start_script_path) and subprocess.call([start_script_path, job_dir]) == 0:
+        started = True
+      else:
+        print "Platform start script %s failed"%(start_script_path)
+    else:
+      print "Platform prepare script %s failed"%(os.path.basename(job_dir))
+    if not started:
+      print "Platform prepare or start script %s failed, cleanup the PI nodes!"%(start_script_path)
+      # on all PI nodes: cleanup
+      stop_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "stop.py")
+      if os.path.exists(stop_script_path):
+        subprocess.call([stop_script_path, job_dir])
+      pssh(hosts_path, "cleanup.sh %s"%(os.path.basename(job_dir)), "Cleaning up the PI nodes")
+      reboot()
+      attempt += 1
+  if not started:
+    print "Platform start script %s failed after %u attempts."%(start_script_path, attempt)
     sys.exit(1)
   # update curr_job file to know that this job is active
   file_write(CURR_JOB_PATH, "%u\n" %(job_id))
@@ -273,6 +321,11 @@ def start(job_id):
   # write history
   history_message = "%s: %s started job %u, platform %s, directory %s" %(ts, USER, job_id, platform, job_dir)
   file_append(os.path.join(TESTBED_PATH, "history"), history_message + "\n")
+  # schedule end of job if a duration is set
+  if duration != None:
+    print "Scheduling end of job in %u min" %(duration)
+	# schedule in duration + 1 to account for the currently begun minute
+    os.system("echo 'testbed.py stop --force --start-next'  | at now + %u min" %(duration + 1))
   print history_message
   
 def rsync(src, dst):
@@ -324,6 +377,7 @@ def stop(do_force):
     download()
   # on all PI nodes: cleanup
   if pssh(hosts_path, "cleanup.sh %s"%(os.path.basename(job_dir)), "Cleaning up the PI nodes") != 0:
+    reboot() # something went probably wrong with serialdump, reboot the nodes
     if not do_force:
       sys.exit(1)
   # remove current job-related files
@@ -334,6 +388,10 @@ def stop(do_force):
   # write history
   history_message = "%s: %s stopped job %u, platform %s, directory %s" %(ts, USER, job_id, platform, job_dir)
   file_append(os.path.join(TESTBED_PATH, "history"), history_message + "\n")
+  # start next job if requests
+  if do_start_next:
+    print "Starting next job"
+    start(None)
   print history_message
   
 def reboot():
@@ -346,6 +404,7 @@ def reboot():
   history_message = "%s: %s rebooted the PI nodes" %(ts, USER)
   file_append(os.path.join(TESTBED_PATH, "history"), history_message + "\n")
   print history_message
+  time.sleep(60) # wait 60s to give time for reboot
 
 def usage():
   print "Usage: $testbed.py command [--parameter value]"
@@ -366,17 +425,19 @@ def usage():
   print "--copy-from     'initialize job directory with content from PATH (if PATH is a directory) or with file PATH (otherwise)'"
   print "--name          'set the job name (no spaces)'"
   print "--platform      'set a platform for the job (must be a folder in %s)'"%(TESTBED_SCRIPTS_PATH)
+  print "--duration      'job duration in minutes (optional). If set, the next job will start automatically after the end of the current.'"
   print "--hosts         'set the hostfile containing all PI host involved in the job'"
   print "--start         'start the job immediately after creating it'"
   print 
   print "Usage of start:"
-  print "$testbed.py start --job-id ID"
-  print "--job-id        'the unique job id (obtained at creation)'"
+  print "$testbed.py start [--job-id ID]"
+  print "--job-id        'the unique job id (obtained at creation). If not set, start next job.'"
   print
   print "Usage of stop:"
   print "$testbed.py stop [--force] [--no-download]"
   print "--force         'stop the job even if uninstall scripts fail'"
   print "--no-download   'do not download the logs before stopping'"
+  print "--start-next    'start next job after stopping the current'"
   print
   print "Usage of status, list, download, stop, reboot:"
   print "These commands use no parameter."
@@ -394,7 +455,7 @@ if __name__=="__main__":
     sys.exit(1)
   
   try:
-    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "job-id=", "start", "force", "no-download"] ) 
+    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next"])
   except getopt.GetoptError:
     usage()
 
@@ -411,20 +472,24 @@ if __name__=="__main__":
        copy_from = os.path.normpath(value)
    elif opt == "--job-id":
        job_id = int(value)
+   elif opt == "--duration":
+       duration = value
    elif opt == "--start":
        do_start = True
    elif opt == "--force":
        do_force = True
    elif opt == "--no-download":
        do_no_download = True
+   elif opt == "--start-next":
+       do_start_next = True
          
   if command == "create":
-      create(name, platform, hosts, copy_from, do_start)
+      create(name, platform, hosts, copy_from, do_start, duration)
   elif command == "status":
       status()
   elif command == "list":
       list()
-  elif command == "start" and job_id != None:
+  elif command == "start":
       start(job_id)
   elif command == "download":
       download()
