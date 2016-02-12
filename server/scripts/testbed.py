@@ -382,7 +382,7 @@ def usage():
   print "These commands use no parameter."
   print
   print "Examples:"
-  print "$testbed.py create --copy-from /usr/testbed/examples/jn5168-hello-world --start     'create and start a JN5169 hello-world job'"
+  print "$testbed.py create --copy-from /usr/testbed/examples/jn516x-hello-world --start     'create and start a JN516x hello-world job'"
   print "$testbed.py stop                                                                    'stop the job and download the logs'"
   print
   sys.exit(2)
