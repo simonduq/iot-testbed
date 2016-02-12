@@ -388,6 +388,9 @@ def stop(do_force):
   # write history
   history_message = "%s: %s stopped job %u, platform %s, directory %s" %(ts, USER, job_id, platform, job_dir)
   file_append(os.path.join(TESTBED_PATH, "history"), history_message + "\n")
+  # kill at jobs (jobs scheduled to stop in the future)
+  print "Killing pending at jobs"
+  os.system("for i in `atq | awk '{print $1}'`;do atrm $i;done")
   # start next job if requests
   if do_start_next:
     print "Starting next job"
