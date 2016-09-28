@@ -255,7 +255,7 @@ def list():
                             "created": created, "started": started, "stopped": stopped,
                             "n_log_files": n_log_files}
   for job_id in sorted(all_jobs.keys()):
-    print "{:6d} {:22s} {:12s} duration: {:6d} min, created: {:19s}, started: {:19s}, stopped: {:19s}, logs: {:2d} nodes".format(
+    print "{:6d} {:40s} {:12s} duration: {:6d} min, created: {:19s}, started: {:19s}, stopped: {:19s}, logs: {:2d} nodes".format(
                   job_id, all_jobs[job_id]['dir'],
                   all_jobs[job_id]['platform'], all_jobs[job_id]['duration'], all_jobs[job_id]['created'],
                   all_jobs[job_id]['started'], all_jobs[job_id]['stopped'],
@@ -329,7 +329,7 @@ def start(job_id):
   print history_message
   
 def rsync(src, dst):
-  print "rsync -az %s %s" %(src, dst)
+  print "rsync -avz %s %s" %(src, dst)
   return subprocess.call(["rsync", "-az", src, dst])
 	
 def download():
