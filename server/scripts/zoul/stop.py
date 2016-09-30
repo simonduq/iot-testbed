@@ -13,7 +13,8 @@ REMOTE_LOGS_PATH = "/home/user/logs"
 REMOTE_SCRIPTS_PATH = "/home/user/scripts"
 REMOTE_ZOUL_SCRIPTS_PATH = os.path.join(REMOTE_SCRIPTS_PATH, "zoul")
 REMOTE_TMP_PATH = "/home/user/tmp"
-REMOTE_NULL_FIRMWARE_PATH = os.path.join(REMOTE_ZOUL_SCRIPTS_PATH, "null.zoul")
+REMOTE_NULL_FIRMWARE_PATH = os.path.join(REMOTE_ZOUL_SCRIPTS_PATH, "null.bin")
+REMOTE_BSL_ADDRESS_PATH = os.path.join(REMOTE_ZOUL_SCRIPTS_PATH, "null_bsl_address.txt")
 
 if __name__=="__main__":
   
@@ -28,6 +29,6 @@ if __name__=="__main__":
   # Kill serialdump
   pssh(hosts_path, "killall contiki-serialdump -9", "Stopping serialdump")
   # Program the nodes with null firmware
-  if pssh(hosts_path, "%s %s"%(os.path.join(REMOTE_ZOUL_SCRIPTS_PATH, "install.sh"), REMOTE_NULL_FIRMWARE_PATH), "Uninstalling zoul firmware") != 0:
+  if pssh(hosts_path, "%s %s %s"%(os.path.join(REMOTE_ZOUL_SCRIPTS_PATH, "install.sh"), REMOTE_NULL_FIRMWARE_PATH, REMOTE_BSL_ADDRESS_PATH), "Uninstalling zoul firmware") != 0:
     sys.exit(4)
 
