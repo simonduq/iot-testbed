@@ -1,5 +1,5 @@
 usb-hub-off.sh
-rm logs/$1/log.txt
+rm logs/$1/log.txt -rf
 rmdir -p logs/$1
-rm tmp/*
+rm tmp/* -rf
 rmdir tmp

@@ -302,7 +302,7 @@ def start(job_id):
     else:
       print "Platform prepare script %s failed"%(os.path.basename(job_dir))
     if not started:
-      print "Platform prepare or start script %s failed, cleanup the PI nodes!"%(start_script_path)
+      print "Platform prepare or start script failed, cleanup the PI nodes!"
       # on all PI nodes: cleanup
       stop_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "stop.py")
       if os.path.exists(stop_script_path):
@@ -377,6 +377,7 @@ def stop(do_force):
     download()
   # on all PI nodes: cleanup
   if pssh(hosts_path, "cleanup.sh %s"%(os.path.basename(job_dir)), "Cleaning up the PI nodes") != 0:
+    print "Rebooting the nodes"
     reboot() # something went probably wrong with serialdump, reboot the nodes
     if not do_force:
       sys.exit(1)
@@ -398,16 +399,17 @@ def stop(do_force):
   print history_message
   
 def reboot():
+  d = 60
   load_curr_job_variables(False, True)
   # reboot all PI nodes
   if pssh(os.path.join(TESTBED_SCRIPTS_PATH, "all-hosts"), "sudo reboot", "Rebooting the PI nodes") != 0:
     sys.exit(1)
   # write history
   ts = timestamp()
-  history_message = "%s: %s rebooted the PI nodes" %(ts, USER)
+  history_message = "%s: %s rebooted the PI nodes. Waiting %u s." %(ts, USER, d)
   file_append(os.path.join(TESTBED_PATH, "history"), history_message + "\n")
   print history_message
-  time.sleep(60) # wait 60s to give time for reboot
+  time.sleep(d) # wait 60s to give time for reboot
 
 def usage():
   print "Usage: $testbed.py command [--parameter value]"
