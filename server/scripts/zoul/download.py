@@ -79,12 +79,16 @@ if __name__=="__main__":
       log_files.append({'node_id': node_id, 'file': curr_log_file, 'next_timestamp': timestamp, 'next_message': message})
   
   line_cnt = 0
+  first_time = 0
   while True:
     timestamp, node_id, message = get_next_line(log_files)
     if timestamp == None:
       break
+    if first_time == 0:
+      first_time = timestamp
+    timestamp -= first_time
     # generate a single aggregated log file  
-    dest_file.write("%016u\tID:%u\t%s"%(timestamp, node_id, message))
+    dest_file.write("%8u.%06u\tID:%u\t%s"%(timestamp/1000000, timestamp%1000000, node_id, message))
     line_cnt += 1
     if line_cnt % 100000 == 0:
       print "%u"%(line_cnt),
