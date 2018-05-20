@@ -34,6 +34,7 @@ do_start = False
 do_force = False
 do_no_download = False
 do_start_next = False
+metadata = None
 
 MAX_START_ATTEMPTS = 3
 TESTBED_PATH = "/usr/testbed"
@@ -128,7 +129,7 @@ def load_job_variables(job_id):
   duration = file_read(os.path.join(job_dir, "duration"))
   if duration != None: duration = int(duration)
 
-def create(name, platform, hosts, copy_from, do_start, duration):
+def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   # if do_start is set, first check that there is no job active
   if do_start:
     load_curr_job_variables(False, True)
@@ -196,6 +197,9 @@ def create(name, platform, hosts, copy_from, do_start, duration):
       shutil.copyfile(copy_from, os.path.join(job_dir, os.path.basename(copy_from)))
   else:
     os.makedirs(job_dir)
+  # copy metadata file, if any
+  if metadata != None:
+    shutil.copyfile(metadata, os.path.join(job_dir, os.path.basename(metadata)))
   # create host file in job directory
   shutil.copyfile(hosts, os.path.join(job_dir, "hosts"))
   # create platform file in job directory
@@ -434,6 +438,7 @@ def usage():
   print "--duration      'job duration in minutes (optional). If set, the next job will start automatically after the end of the current.'"
   print "--hosts         'set the hostfile containing all PI host involved in the job'"
   print "--start         'start the job immediately after creating it'"
+  print "--metadata      'copy any metadata file to job directory'"
   print 
   print "Usage of start:"
   print "$testbed.py start [--job-id ID]"
@@ -461,7 +466,7 @@ if __name__=="__main__":
     sys.exit(1)
   
   try:
-    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next"])
+    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata="])
   except getopt.GetoptError:
     usage()
 
@@ -488,9 +493,11 @@ if __name__=="__main__":
        do_no_download = True
    elif opt == "--start-next":
        do_start_next = True
+   elif opt == "--metadata":
+       metadata = value
          
   if command == "create":
-      create(name, platform, hosts, copy_from, do_start, duration)
+      create(name, platform, hosts, copy_from, do_start, duration, metadata)
   elif command == "status":
       status()
   elif command == "list":
