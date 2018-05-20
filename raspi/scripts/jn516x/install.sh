@@ -1,10 +1,9 @@
 #!/bin/bash
- 
 # First reset the node so it enters programming mode
 sleep 1
 usb-hub-off.sh
 usb-hub-on.sh
-sleep 1
+sleep 3
 # Now program the node
 firmware_path=$1
 tty_path=`ls /dev/serial/by-id/*NXP_JN516?_USB_Dongle*`
