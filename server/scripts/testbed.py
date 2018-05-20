@@ -13,6 +13,7 @@ import grp
 import subprocess
 import re
 import datetime
+import pytz
 import multiprocessing
 from pssh import *
 
@@ -42,7 +43,7 @@ HOME = os.path.expanduser("~")
 USER = getpass.getuser()
     
 def timestamp():
-  return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+  return datetime.datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
 
 def file_set_permissions(path):
   # whenever writing to a file in TESTBED_PATH for the first time, set group as "testbed"
