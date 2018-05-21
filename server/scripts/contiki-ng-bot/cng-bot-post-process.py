@@ -17,15 +17,24 @@ from os.path import expanduser
 
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
 
+# get job directory from id
+def get_job_directory(job_id):
+  jobs_dir = os.path.join(HOME, "jobs")
+  if os.path.isdir(jobs_dir):
+    for f in os.listdir(jobs_dir):
+      if f.startswith("%d_"%(job_id)):
+        return os.path.join(jobs_dir, f)
+  return None
+
 def main():
     if len(sys.argv) < 1:
         return
     else:
-        dir = sys.argv[1].rstrip('/')
+        jobId = int(sys.argv[1].rstrip('/'))
+
+    dir = get_job_directory(jobId)
     date = open(os.path.join(dir, ".started"), 'r').readlines()[0].strip()
     duration = open(os.path.join(dir, "duration"), 'r').readlines()[0].strip()
-
-    jobId = int(os.path.basename(dir).split("_")[0])
 
     taskData = yaml.load(open(os.path.join(dir, "task.yml"), "r"))
 
