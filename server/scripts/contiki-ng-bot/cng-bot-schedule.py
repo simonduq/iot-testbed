@@ -10,7 +10,7 @@ from IPython import embed
 from os.path import expanduser
 
 PATH_CURR_JOB = "/usr/testbed/curr_job"
-PATH_POST_PROCESSING = "/usr/testbed/scripts/contiki-ng-bot/cng-parse-script.sh"
+PATH_POST_PROCESSING = "/usr/testbed/scripts/contiki-ng-bot/cng-bot-parse-script.sh"
 
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
