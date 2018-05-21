@@ -10,6 +10,8 @@ from IPython import embed
 from os.path import expanduser
 
 PATH_CURR_JOB = "/usr/testbed/curr_job"
+PATH_POST_PROCESSING = "/usr/testbed/scripts/contiki-ng-bot/cng-parse-script.sh"
+
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
 PATH_TASKLIST = expanduser("~")+"/cng-bot/tasklist.yml"
@@ -78,7 +80,7 @@ def run(task):
         # Copy firmware
         shutil.copyfile("node.zoul", os.path.join(setup, "node.zoul"))
         # Create testbed job
-        os.system("testbed.py create --platform zoul --copy-from %s --duration=%u"%(setup, setupData["duration"]))
+        os.system("testbed.py create --platform zoul --copy-from %s --duration=%u --post-processing=%s"%(setup, setupData["duration"], PATH_POST_PROCESSING))
         # Clean up
         os.system("git checkout develop\n")
         os.system("git reset --hard\n")

@@ -3,8 +3,8 @@
 # Simon Duquennoy (simonduq@sics.se)
 
 import os
-import shutil  
-import sys  
+import shutil
+import sys
 import getopt
 import getpass
 import time
@@ -22,19 +22,20 @@ curr_job_owner = None
 curr_job_date = None
 job_dir = None
 hosts_path = None
-  
+
 # value of the command line parameters
 name = None
 platform = None
 duration = None
 copy_from = None
 job_id = None
-hosts = None  
+hosts = None
 do_start = False
 do_force = False
 do_no_download = False
 do_start_next = False
 metadata = None
+post_processing = None
 
 MAX_START_ATTEMPTS = 3
 TESTBED_PATH = "/usr/testbed"
@@ -42,7 +43,7 @@ TESTBED_SCRIPTS_PATH = os.path.join(TESTBED_PATH, "scripts")
 CURR_JOB_PATH = os.path.join(TESTBED_PATH, "curr_job")
 HOME = os.path.expanduser("~")
 USER = getpass.getuser()
-    
+
 def timestamp():
   return datetime.datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
 
@@ -76,7 +77,7 @@ def file_append(path, str):
   file_set_permissions(path)
   file = open(path, "a")
   file.write(str)
-  
+
 # checks is any element of aset is in seq
 def contains_any(seq, aset):
   for c in seq:
@@ -111,14 +112,14 @@ def load_curr_job_variables(need_curr_job, need_no_curr_job):
   elif need_no_curr_job and curr_job:
     print "There is a job currently active!"
     sys.exit(1)
-    
+
 # load all variables related to a given job
 def load_job_variables(job_id):
   global job_dir, platform, hosts_path, duration
   # check if the job exists
   job_dir = get_job_directory(job_id)
   if job_dir == None:
-    print "Job %u not found!" %(job_id)      
+    print "Job %u not found!" %(job_id)
     sys.exit(1)
   # read what the platform for this job is
   platform = file_read(os.path.join(job_dir, "platform"))
@@ -129,7 +130,7 @@ def load_job_variables(job_id):
   duration = file_read(os.path.join(job_dir, "duration"))
   if duration != None: duration = int(duration)
 
-def create(name, platform, hosts, copy_from, do_start, duration, metadata):
+def create(name, platform, hosts, copy_from, do_start, duration, metadata, post_processing):
   # if do_start is set, first check that there is no job active
   if do_start:
     load_curr_job_variables(False, True)
@@ -143,7 +144,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   if contains_any(name, [' ', '.', ',' , '/']):
     print "Name %s is not valid!" %(name)
     sys.exit(1)
-    
+
   # if host is not set, take it from copy-from or use the default all-hosts file
   if hosts == None:
     if copy_from != None and os.path.exists(os.path.join(copy_from, "hosts")):
@@ -154,7 +155,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   if not os.path.isfile(hosts):
     print "Host file %s not found!" %(hosts)
     sys.exit(1)
-      
+
   # if platform is not set, take it from copy-from or use "noplatform"
   if platform == None:
     if copy_from != None and os.path.isfile(os.path.join(copy_from, "platform")):
@@ -171,7 +172,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   if duration == None:
     if copy_from != None and os.path.isfile(os.path.join(copy_from, "duration")):
       duration = file_read(os.path.join(copy_from, "duration"))
-    
+
   # read next job ID from 'next_job' file
   next_job_path = os.path.join(TESTBED_PATH, "next_job")
   if not os.path.exists(next_job_path):
@@ -179,11 +180,11 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   else:
     job_id = int(file_read(next_job_path))
   # check if job id is already used
-  job_dir = get_job_directory(job_id) 
+  job_dir = get_job_directory(job_id)
   if job_dir != None:
     print "Job %d already exists! Delete %s before creating a new job." %(job_id, job_dir)
     sys.exit(1)
-  
+
   # create user job directory
   job_dir = os.path.join(HOME, "jobs", "%u_%s" %(job_id, name))
   # initialize job directory from copy_from command line parameter
@@ -200,6 +201,11 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata):
   # copy metadata file, if any
   if metadata != None:
     shutil.copyfile(metadata, os.path.join(job_dir, os.path.basename(metadata)))
+  # copy post-processing script, if any
+  if post_processing != None:
+    post_processing_path = os.path.join(job_dir, "post_processing.sh")
+    shutil.copyfile(post_processing, post_processing_path)
+    os.chmod(post_processing_path, 0740)
   # create host file in job directory
   shutil.copyfile(hosts, os.path.join(job_dir, "hosts"))
   # create platform file in job directory
@@ -283,7 +289,7 @@ def get_next_job_id():
         if not os.path.isfile(os.path.join(job_dir, ".started")):
 		  return job_id
   return None
-  
+
 def start(job_id):
   if job_id == None:
     job_id = get_next_job_id()
@@ -335,11 +341,11 @@ def start(job_id):
 	# schedule in duration + 1 to account for the currently begun minute
     os.system("echo 'testbed.py stop --force --start-next'  | at now + %u min" %(duration + 1))
   print history_message
-  
+
 def rsync(src, dst):
   print "rsync -avz %s %s" %(src, dst)
   return subprocess.call(["rsync", "-az", src, dst])
-	
+
 def download():
   load_curr_job_variables(True, False)
   job_id = curr_job
@@ -368,7 +374,7 @@ def download():
     print "Platform download script %s failed!"%(download_script_path)
     sys.exit(1)
   return
-    
+
 def stop(do_force):
   load_curr_job_variables(True, False)
   job_id = curr_job
@@ -400,12 +406,18 @@ def stop(do_force):
   # kill at jobs (jobs scheduled to stop in the future)
   print "Killing pending at jobs"
   os.system("for i in `atq | awk '{print $1}'`;do atrm $i;done")
-  # start next job if requests
+  # start next job if requested
   if do_start_next:
     print "Starting next job"
     start(None)
+  # run post-processing script
+  post_processing_path = os.path.join(job_dir, "post_processing.sh")
+  if os.path.exists(post_processing_path):
+      command = "%s %u" %(post_processing_path, job_id)
+      print "Running command: '%s'" %(command)
+      os.system(command)
   print history_message
-  
+
 def reboot():
   d = 60
   load_curr_job_variables(False, True)
@@ -421,37 +433,38 @@ def reboot():
 
 def usage():
   print "Usage: $testbed.py command [--parameter value]"
-  print 
+  print
   print "Commands:"
-  print "create          'create a job for future use'"
-  print "start           'start a job'"
-  print "download        'download the current job's logs'"
-  print "stop            'stop the current job and download its logs'"
-  print 
-  print "status          'show status of the currently active job'"
-  print "list            'list all your jobs'"
-  print 
-  print "reboot          'reboot the PI nodes (for maintenance purposes -- use with care)'"
-  print 
+  print "create             'create a job for future use'"
+  print "start              'start a job'"
+  print "download           'download the current job's logs'"
+  print "stop               'stop the current job and download its logs'"
+  print
+  print "status             'show status of the currently active job'"
+  print "list               'list all your jobs'"
+  print
+  print "reboot             'reboot the PI nodes (for maintenance purposes -- use with care)'"
+  print
   print "Usage of create:"
   print "$testbed.py create [--copy-from PATH] [--name NAME] [--platform PLATFORM] [--hosts HOSTS] [--start]"
-  print "--copy-from     'initialize job directory with content from PATH (if PATH is a directory) or with file PATH (otherwise)'"
-  print "--name          'set the job name (no spaces)'"
-  print "--platform      'set a platform for the job (must be a folder in %s)'"%(TESTBED_SCRIPTS_PATH)
-  print "--duration      'job duration in minutes (optional). If set, the next job will start automatically after the end of the current.'"
-  print "--hosts         'set the hostfile containing all PI host involved in the job'"
-  print "--start         'start the job immediately after creating it'"
-  print "--metadata      'copy any metadata file to job directory'"
-  print 
+  print "--copy-from        'initialize job directory with content from PATH (if PATH is a directory) or with file PATH (otherwise)'"
+  print "--name             'set the job name (no spaces)'"
+  print "--platform         'set a platform for the job (must be a folder in %s)'"%(TESTBED_SCRIPTS_PATH)
+  print "--duration         'job duration in minutes (optional). If set, the next job will start automatically after the end of the current.'"
+  print "--hosts            'set the hostfile containing all PI host involved in the job'"
+  print "--start            'start the job immediately after creating it'"
+  print "--metadata         'copy any metadata file to job directory'"
+  print "--post-processing  'call a given post-processing script at the end of the run'"
+  print
   print "Usage of start:"
   print "$testbed.py start [--job-id ID]"
-  print "--job-id        'the unique job id (obtained at creation). If not set, start next job.'"
+  print "--job-id           'the unique job id (obtained at creation). If not set, start next job.'"
   print
   print "Usage of stop:"
   print "$testbed.py stop [--force] [--no-download]"
-  print "--force         'stop the job even if uninstall scripts fail'"
-  print "--no-download   'do not download the logs before stopping'"
-  print "--start-next    'start next job after stopping the current'"
+  print "--force            'stop the job even if uninstall scripts fail'"
+  print "--no-download      'do not download the logs before stopping'"
+  print "--start-next       'start next job after stopping the current'"
   print
   print "Usage of status, list, download, stop, reboot:"
   print "These commands use no parameter."
@@ -467,14 +480,14 @@ if __name__=="__main__":
   if len(sys.argv)<2:
     usage()
     sys.exit(1)
-  
+
   try:
-    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata="])
+    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata=", "post-processing="])
   except getopt.GetoptError:
     usage()
 
   command = sys.argv[1]
-  
+
   for opt, value in opts:
    if opt == "--name":
        name = value
@@ -496,11 +509,13 @@ if __name__=="__main__":
        do_no_download = True
    elif opt == "--start-next":
        do_start_next = True
+   elif opt == '--post-processing':
+       post_processing = value
    elif opt == "--metadata":
        metadata = value
-         
+
   if command == "create":
-      create(name, platform, hosts, copy_from, do_start, duration, metadata)
+      create(name, platform, hosts, copy_from, do_start, duration, metadata, post_processing)
   elif command == "status":
       status()
   elif command == "list":
@@ -515,6 +530,5 @@ if __name__=="__main__":
       reboot()
   else:
     usage()
-  
-  sys.exit(0)
 
+  sys.exit(0)

@@ -38,7 +38,8 @@ def log(msg):
         f.write("%s: %s\n" %(ts, msg))
 
 def main():
-    if len(sys.argv) < 1:
+    if len(sys.argv) < 2:
+        print("Required parameter: jobId")
         return
     else:
         jobId = int(sys.argv[1].rstrip('/'))
