@@ -7,9 +7,6 @@ import subprocess
 from IPython import embed
 from os.path import expanduser
 
-TASKS_PER_EXECUTION = 3
-ALLOW_REPEAT = False
-
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
 PATH_TASKLIST = expanduser("~")+"/cng-bot/tasklist.yml"
@@ -77,14 +74,15 @@ def main():
     # save original working dir
     owd = os.getcwd()
     # read task list
-    taskList = yaml.load(open(PATH_TASKLIST, "r"))
+    taskConfig = yaml.load(open(PATH_TASKLIST, "r"))
+    taskList = taskConfig["tasks"]
 
     if os.path.exists(PATH_LASTRUN):
         lastrun = int(open(PATH_LASTRUN, "r").read().rstrip())
     else:
         lastrun = -1
 
-    runCount = TASKS_PER_EXECUTION if ALLOW_REPEAT else min(TASKS_PER_EXECUTION, len(taskList))
+    runCount = taskConfig['tasks-per-execution'] if taskConfig['allow-repeat'] else min(taskConfig['tasks-per-execution'], len(taskList))
 
     for i in range(runCount):
         index = (lastrun + 1 + i) % len(taskList)
