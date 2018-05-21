@@ -11,4 +11,4 @@ sleep 1
 # Reboot the node
 usb-hub-off.sh
 usb-hub-on.sh
-sleep 1
+sleep 2
