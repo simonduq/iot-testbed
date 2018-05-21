@@ -12,8 +12,8 @@ ALLOW_REPEAT = False
 
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
-PATH_TASKLIST = expanduser("~")+"/tasklist.yml"
-PATH_LASTRUN = expanduser("~")+"./last_run"
+PATH_TASKLIST = expanduser("~")+"/cng-bot/tasklist.yml"
+PATH_LASTRUN = expanduser("~")+"/cng-bot/last_run"
 
 # Example tasklist.yml:
 #- setup: test-csma
@@ -65,7 +65,7 @@ def run(task):
         # Copy parsing file
         shutil.copyfile("parse.py", os.path.join(setup, "parse.py"))
         # Copy firmware
-        shutil.copyfile("noe.zoul", os.path.join(setup, "node.zoul"))
+        shutil.copyfile("node.zoul", os.path.join(setup, "node.zoul"))
         # Create testbed job
         os.system("testbed.py create --platform zoul --copy-from %s --duration=%u"%(setup, setupData["duration"]))
         # Clean up
@@ -88,7 +88,7 @@ def main():
 
     for i in range(runCount):
         index = (lastrun + 1 + i) % len(taskList)
-        run(taskList[id])
+        run(taskList[index])
         os.chdir(owd)
         with open(PATH_LASTRUN, 'w') as f:
             f.write("%u\n"%(index))

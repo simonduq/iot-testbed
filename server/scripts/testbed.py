@@ -247,10 +247,13 @@ def list():
         else: duration = int(duration)
         created = file_read(os.path.join(job_dir, ".created"))
         if created == None: created = "--"
+	else: created = created.split('.')[0]
         started = file_read(os.path.join(job_dir, ".started"))
         if started == None: started = "--"
+	else: started = started.split('.')[0]
         stopped = file_read(os.path.join(job_dir, ".stopped"))
         if stopped == None: stopped = "--"
+	else: stopped = stopped.split('.')[0]
         logs_path = os.path.join(job_dir, "logs")
         if os.path.isdir(logs_path):
           n_log_files = len(filter(lambda x: x.startswith("pi"), os.listdir(logs_path)))
@@ -260,7 +263,7 @@ def list():
                             "created": created, "started": started, "stopped": stopped,
                             "n_log_files": n_log_files}
   for job_id in sorted(all_jobs.keys()):
-    print "{:6d} {:40s} {:12s} duration: {:6d} min, created: {:19s}, started: {:19s}, stopped: {:19s}, logs: {:2d} nodes".format(
+    print "{:6d} {:36s} {:12s} duration: {:6d} min, created: {:19s}, started: {:19s}, stopped: {:19s}, logs: {:2d} nodes".format(
                   job_id, all_jobs[job_id]['dir'],
                   all_jobs[job_id]['platform'], all_jobs[job_id]['duration'], all_jobs[job_id]['created'],
                   all_jobs[job_id]['started'], all_jobs[job_id]['stopped'],
