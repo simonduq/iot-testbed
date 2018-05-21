@@ -49,8 +49,8 @@ def main():
     outFile.write("commit: %s\n" %(taskData["commit"]))
 
     # Output relevant metrics
-    #ret = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), dir])
-    #outFile.write(ret.decode("utf-8") )
+    ret = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), dir])
+    outFile.write(ret.decode("utf-8") )
 
     outFile.write("---\n")
     outFile.write("\n{% include run.md %}\n")
