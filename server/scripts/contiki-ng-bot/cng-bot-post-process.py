@@ -30,7 +30,8 @@ def main():
     taskData = yaml.load(open(os.path.join(dir, "task.yml"), "r"))
 
     # Generate .md file for the run
-    outFile = open(os.path.join(PATH_GITHUBIO, "_runs", "%s.md"%(jobId)), "w")
+    githubPagesMdPath = os.path.join(PATH_GITHUBIO, "_runs", "%s.md"%(jobId))
+    outFile = open(githubPagesMdPath, "w")
     outFile.write("---\n")
     outFile.write("date: %s\n" %(date))
     outFile.write("duration: %s\n" %(duration))
@@ -56,6 +57,13 @@ def main():
     outFile.write("\n{% include run.md %}\n")
 
     # Copy logs to github parseEnergest
-    shutil.copyfile(os.path.join(dir, "logs", "log.txt"), os.path.join(PATH_GITHUBIO, "_logs", "%s.txt"%(jobId)))
+    githubPageLogPath = os.path.join(PATH_GITHUBIO, "_logs", "%s.txt"%(jobId))
+    shutil.copyfile(os.path.join(dir, "logs", "log.txt"), githubPageLogPath)
+
+    # Git ass new files
+    os.chdir(PATH_GITHUBIO)
+    os.system("git add %s" %(githubPagesMdPath))
+    os.system("git add %s" %(githubPageLogPath))
+    os.system("git commit -m 'Reuslts for job %u (%s)'" %(jobId, taskData["setup"]))
 
 main()
