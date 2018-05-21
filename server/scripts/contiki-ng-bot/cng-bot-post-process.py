@@ -8,15 +8,17 @@ import math
 import shutil
 import yaml
 import subprocess
+import datetime
+import pytz
 import pandas as pd
 from pandas import *
-from datetime import *
 from collections import OrderedDict
 from IPython import embed
 from os.path import expanduser
 
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
 PATH_JOBS = expanduser("~")+"/jobs"
+PATH_HISTORY = expanduser("~")+"/cng-bot/history"
 
 # get job directory from id
 def get_job_directory(job_id):
@@ -26,6 +28,15 @@ def get_job_directory(job_id):
         return os.path.join(PATH_JOBS, f)
   return None
 
+def timestamp():
+  return datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
+
+def log(msg):
+    ts = timestamp()
+    print(msg)
+    with open(PATH_HISTORY, "a") as f:
+        f.write("%s: %s\n" %(ts, msg))
+
 def main():
     if len(sys.argv) < 1:
         return
@@ -33,6 +44,22 @@ def main():
         jobId = int(sys.argv[1].rstrip('/'))
 
     dir = get_job_directory(jobId)
+
+    if dir == None:
+        log("Job not found")
+        return
+    if not os.path.exists(os.path.join(dir, ".started")):
+        log("Job never started")
+        return
+    if not os.path.exists(os.path.join(dir, ".stopped")):
+        log("Job not stopped")
+        return
+    logFile = os.path.join(dir, "logs", "log.txt")
+    if not os.path.exists(logFile):
+        log("Log file not found")
+        return
+
+    log("Processing job %u (dir: %s)" %(jobId, dir))
     date = open(os.path.join(dir, ".started"), 'r').readlines()[0].strip()
     duration = open(os.path.join(dir, "duration"), 'r').readlines()[0].strip()
 
@@ -58,8 +85,9 @@ def main():
 
     outFile.write("commit: %s\n" %(taskData["commit"]))
 
-    # Output relevant metrics
-    ret = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), dir])
+    # Parse and output relevant metrics
+    log("Parsing file %s" %(logFile))
+    ret = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), logFile])
     outFile.write(ret.decode("utf-8") )
 
     outFile.write("---\n")

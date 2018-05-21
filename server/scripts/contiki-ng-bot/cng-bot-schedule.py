@@ -37,9 +37,10 @@ def timestamp():
   return datetime.datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
 
 def log(msg):
+    ts = timestamp()
     print(msg)
     with open(PATH_HISTORY, "a") as f:
-        f.write("%s\n" %(msg))
+        f.write("%s: %s\n" %(ts, msg))
 
 def run(task):
     setupData = next(yaml.load_all(open(os.path.join(PATH_GITHUBIO, "_setups", task["setup"]+".md"), "r")))
@@ -84,13 +85,11 @@ def run(task):
         os.system("git clean -fd\n")
 
 def main():
-    ts = timestamp()
-
     # If there is a jub running, abort
     if os.path.exists(PATH_CURR_JOB):
         # Not need to create file PATH_ABORTED; we did not have time
         # to create any job
-        log("%s: job already running. Abort." %(ts))
+        log("Job already running. Abort.")
         return
 
     # Schedule new jobs only if last execution did not abort
@@ -110,7 +109,7 @@ def main():
 
         for i in range(runCount):
             index = (lastrun + 1 + i) % len(taskList)
-            log("%s: creating job %u" %(ts, index))
+            log("Creating job %u" %(index))
             run(taskList[index])
             os.chdir(owd)
             with open(PATH_LASTRUN, 'w') as f:
@@ -120,11 +119,11 @@ def main():
     # we do not create new jobs at next execution.
     if os.path.exists(PATH_CURR_JOB):
         os.system("touch %s" %(PATH_ABORTED))
-        log("%s: job already running. Abort. Set %s" %(ts, PATH_ABORTED))
+        log("Job already running. Abort. Set %s" %(PATH_ABORTED))
     else:
         # Start jobs
         os.system("testbed.py start")
         os.remove(PATH_ABORTED)
-        log("%s: started jobs." %(ts))
+        log("Started jobs.")
 
 main()
