@@ -4,13 +4,18 @@ import os
 import shutil
 import yaml
 import subprocess
+import datetime
+import pytz
 from IPython import embed
 from os.path import expanduser
 
+PATH_CURR_JOB = "/usr/testbed/curr_job"
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
 PATH_TASKLIST = expanduser("~")+"/cng-bot/tasklist.yml"
 PATH_LASTRUN = expanduser("~")+"/cng-bot/last_run"
+PATH_HISTORY = expanduser("~")+"/cng-bot/history"
+PATH_ABORTED = expanduser("~")+"/cng-bot/aborted"
 
 # Example tasklist.yml:
 #- setup: test-csma
@@ -27,6 +32,14 @@ PATH_LASTRUN = expanduser("~")+"/cng-bot/last_run"
 #  xppath: examples/benchmarks/rpl-req-resp
 #  flags:
 #    CONFIG: CONFIG_CSMA
+
+def timestamp():
+  return datetime.datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
+
+def log(msg):
+    print(msg)
+    with open(PATH_HISTORY, "a") as f:
+        f.write("%s\n" %(msg))
 
 def run(task):
     setupData = next(yaml.load_all(open(os.path.join(PATH_GITHUBIO, "_setups", task["setup"]+".md"), "r")))
@@ -71,24 +84,47 @@ def run(task):
         os.system("git clean -fd\n")
 
 def main():
-    # save original working dir
-    owd = os.getcwd()
-    # read task list
-    taskConfig = yaml.load(open(PATH_TASKLIST, "r"))
-    taskList = taskConfig["tasks"]
+    ts = timestamp()
 
-    if os.path.exists(PATH_LASTRUN):
-        lastrun = int(open(PATH_LASTRUN, "r").read().rstrip())
+    # If there is a jub running, abort
+    if os.path.exists(PATH_CURR_JOB):
+        # Not need to create file PATH_ABORTED; we did not have time
+        # to create any job
+        log("%s: job already running. Abort." %(ts))
+        return
+
+    # Schedule new jobs only if last execution did not abort
+    if not os.path.exists(PATH_ABORTED):
+        # save original working dir
+        owd = os.getcwd()
+        # read task list
+        taskConfig = yaml.load(open(PATH_TASKLIST, "r"))
+        taskList = taskConfig["tasks"]
+
+        if os.path.exists(PATH_LASTRUN):
+            lastrun = int(open(PATH_LASTRUN, "r").read().rstrip())
+        else:
+            lastrun = -1
+
+        runCount = taskConfig['tasks-per-execution'] if taskConfig['allow-repeat'] else min(taskConfig['tasks-per-execution'], len(taskList))
+
+        for i in range(runCount):
+            index = (lastrun + 1 + i) % len(taskList)
+            log("%s: creating job %u" %(ts, index))
+            run(taskList[index])
+            os.chdir(owd)
+            with open(PATH_LASTRUN, 'w') as f:
+                f.write("%u\n"%(index))
+
+    # If there is a jub running. Create file PATH_ABORTED so that
+    # we do not create new jobs at next execution.
+    if os.path.exists(PATH_CURR_JOB):
+        os.system("touch %s" %(PATH_ABORTED))
+        log("%s: job already running. Abort. Set %s" %(ts, PATH_ABORTED))
     else:
-        lastrun = -1
-
-    runCount = taskConfig['tasks-per-execution'] if taskConfig['allow-repeat'] else min(taskConfig['tasks-per-execution'], len(taskList))
-
-    for i in range(runCount):
-        index = (lastrun + 1 + i) % len(taskList)
-        run(taskList[index])
-        os.chdir(owd)
-        with open(PATH_LASTRUN, 'w') as f:
-            f.write("%u\n"%(index))
+        # Start jobs
+        os.system("testbed.py start")
+        os.remove(PATH_ABORTED)
+        log("%s: started jobs." %(ts))
 
 main()
