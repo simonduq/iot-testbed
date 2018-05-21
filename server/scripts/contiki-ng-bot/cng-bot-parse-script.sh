@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-cng-bot-post-process.py $1
+/usr/testbed/scripts/contiki-ng-bot/cng-bot-post-process.py $1
