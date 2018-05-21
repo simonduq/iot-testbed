@@ -75,5 +75,6 @@ def main():
     os.system("git add %s" %(githubPagesMdPath))
     os.system("git add %s" %(githubPageLogPath))
     os.system("git commit -m 'Reuslts for job %u (%s)'" %(jobId, taskData["setup"]))
+    os.system("git push origin master")
 
 main()
