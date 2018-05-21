@@ -16,14 +16,14 @@ from IPython import embed
 from os.path import expanduser
 
 PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
+PATH_JOBS = expanduser("~")+"/jobs"
 
 # get job directory from id
 def get_job_directory(job_id):
-  jobs_dir = os.path.join(HOME, "jobs")
-  if os.path.isdir(jobs_dir):
-    for f in os.listdir(jobs_dir):
+  if os.path.isdir(PATH_JOBS):
+    for f in os.listdir(PATH_JOBS):
       if f.startswith("%d_"%(job_id)):
-        return os.path.join(jobs_dir, f)
+        return os.path.join(PATH_JOBS, f)
   return None
 
 def main():
