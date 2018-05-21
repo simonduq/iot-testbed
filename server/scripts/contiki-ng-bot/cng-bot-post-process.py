@@ -79,7 +79,7 @@ def main():
     if "branch" in taskData:
         outFile.write("branch: %s\n" %(taskData["branch"]))
     if "xppath" in taskData:
-        outFile.write("path: %s\n" %(taskData["xppath"]))
+        outFile.write("xppath: %s\n" %(taskData["xppath"]))
     if "flags" in taskData:
         outFile.write("flags: %s\n" %(taskData["flags"]))
 
