@@ -55,6 +55,7 @@ def main():
 
     outFile.write("---\n")
     outFile.write("\n{% include run.md %}\n")
+    outFile.flush()
 
     # Copy logs to github parseEnergest
     githubPageLogPath = os.path.join(PATH_GITHUBIO, "_logs", "%u.txt"%(jobId))
