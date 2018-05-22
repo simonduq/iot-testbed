@@ -95,7 +95,7 @@ def run(task):
         # Copy firmware
         shutil.copyfile("node.zoul", os.path.join(setup, "node.zoul"))
         # Create testbed job
-        os.system("testbed.py create --platform zoul --copy-from %s --duration=%u --post-processing=%s"%(setup, setupData["duration"], PATH_POST_PROCESSING))
+        os.system("testbed.py create --platform zoul --copy-from %s --duration=%u --post-processing=%s --nested"%(setup, setupData["duration"], PATH_POST_PROCESSING))
         # Clean up
         os.system("git checkout develop\n")
         os.system("git reset --hard\n")
@@ -139,7 +139,7 @@ def main():
             f.write("%u\n"%(index))
 
     # Start jobs
-    os.system("testbed.py start")
+    os.system("testbed.py start --nested")
     os.remove(PATH_ABORTED)
     log("Started jobs.")
 

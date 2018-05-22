@@ -36,6 +36,7 @@ do_no_download = False
 do_start_next = False
 metadata = None
 post_processing = None
+is_nested = False
 
 MAX_START_ATTEMPTS = 3
 TESTBED_PATH = "/usr/testbed"
@@ -49,10 +50,12 @@ def lock_is_taken():
     return os.path.exists(LOCK_PATH)
 
 def lock_aquire():
-    open(LOCK_PATH, 'a').close()
+    if not is_nested:
+        open(LOCK_PATH, 'a').close()
 
 def lock_release():
-    os.remove(LOCK_PATH)
+    if not is_nested:
+        os.remove(LOCK_PATH)
 
 def do_quit(status):
     lock_release()
@@ -469,6 +472,7 @@ def usage():
   print "--start            'start the job immediately after creating it'"
   print "--metadata         'copy any metadata file to job directory'"
   print "--post-processing  'call a given post-processing script at the end of the run'"
+  print "--nested           'set this if calling from a script that already took the lock'"
   print
   print "Usage of start:"
   print "$testbed.py start [--job-id ID]"
@@ -491,18 +495,12 @@ def usage():
 
 if __name__=="__main__":
 
-  if lock_is_taken():
-      print "Lock is taken. Try a gain in a few seconds."
-      sys.exit(1)
-  else:
-      lock_aquire()
-
   if len(sys.argv)<2:
     usage()
-    do_quit(1)
+    sys.exit(1)
 
   try:
-    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata=", "post-processing="])
+    opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata=", "post-processing=", "nested"])
   except getopt.GetoptError:
     usage()
 
@@ -533,6 +531,14 @@ if __name__=="__main__":
        post_processing = value
    elif opt == "--metadata":
        metadata = value
+   elif opt == "--force":
+       is_nested = True
+
+  if not is_nested and lock_is_taken():
+      print "Lock is taken. Try a gain in a few seconds."
+      sys.exit(1)
+  else:
+      lock_aquire()
 
   if command == "create":
       create(name, platform, hosts, copy_from, do_start, duration, metadata, post_processing)
