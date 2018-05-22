@@ -61,6 +61,15 @@ def main():
         return
 
     log("Processing job %u (dir: %s)" %(jobId, dir))
+
+    # Parse log file
+    log("Parsing file %s" %(logFile))
+    try:
+        parsingRet = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), logFile])
+    except subprocess.CalledProcessError as e:
+        log("Parsing failed")
+        return
+
     date = open(os.path.join(dir, ".started"), 'r').readlines()[0].strip()
     duration = open(os.path.join(dir, "duration"), 'r').readlines()[0].strip()
 
@@ -89,11 +98,8 @@ def main():
         outFile.write("flags: %s\n" %(taskData["flags"]))
 
     outFile.write("commit: %s\n" %(taskData["commit"]))
-
-    # Parse and output relevant metrics
-    log("Parsing file %s" %(logFile))
-    ret = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), logFile])
-    outFile.write(ret.decode("utf-8") )
+    # Output result of log parsing
+    outFile.write(parsingRet.decode("utf-8") )
 
     outFile.write("---\n")
     outFile.write("\n{% include run.md %}\n")
