@@ -492,7 +492,7 @@ def usage():
 if __name__=="__main__":
 
   if lock_is_taken():
-      print "Lock is taken. Try a gain in a few seconds."
+      print "Lock is taken. Try a gain in a few seconds/minutes."
       sys.exit(1)
   else:
       lock_aquire()
