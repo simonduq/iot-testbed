@@ -40,9 +40,23 @@ post_processing = None
 MAX_START_ATTEMPTS = 3
 TESTBED_PATH = "/usr/testbed"
 TESTBED_SCRIPTS_PATH = os.path.join(TESTBED_PATH, "scripts")
+LOCK_PATH = os.path.join(TESTBED_PATH, "lock")
 CURR_JOB_PATH = os.path.join(TESTBED_PATH, "curr_job")
 HOME = os.path.expanduser("~")
 USER = getpass.getuser()
+
+def lock_is_taken():
+    return os.path.exists(LOCK_PATH)
+
+def lock_aquire():
+    open(LOCK_PATH, 'a').close()
+
+def lock_release():
+    os.remove(LOCK_PATH)
+
+def do_quit(status):
+    lock_release()
+    sys.exit(status)
 
 def timestamp():
   return datetime.datetime.now(tz=pytz.timezone('Europe/Stockholm')).isoformat()
@@ -105,13 +119,13 @@ def load_curr_job_variables(need_curr_job, need_no_curr_job):
     curr_job_date = os.stat(CURR_JOB_PATH).st_ctime
   if need_curr_job and not curr_job:
     print "There is no active job!"
-    sys.exit(1)
+    do_quit(1)
   if need_curr_job and curr_job and USER != curr_job_owner:
     print "Job %u is not yours (belongs to %s)!" %(curr_job, curr_job_owner)
-    sys.exit(1)
+    do_quit(1)
   elif need_no_curr_job and curr_job:
     print "There is a job currently active!"
-    sys.exit(1)
+    do_quit(1)
 
 # load all variables related to a given job
 def load_job_variables(job_id):
@@ -120,7 +134,7 @@ def load_job_variables(job_id):
   job_dir = get_job_directory(job_id)
   if job_dir == None:
     print "Job %u not found!" %(job_id)
-    sys.exit(1)
+    do_quit(1)
   # read what the platform for this job is
   platform = file_read(os.path.join(job_dir, "platform"))
   # get path to the hosts file (list of PI nodes involved)
@@ -143,7 +157,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata, post_
   # check validity of name
   if contains_any(name, [' ', '.', ',' , '/']):
     print "Name %s is not valid!" %(name)
-    sys.exit(1)
+    do_quit(1)
 
   # if host is not set, take it from copy-from or use the default all-hosts file
   if hosts == None:
@@ -154,7 +168,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata, post_
   # check if host file exists
   if not os.path.isfile(hosts):
     print "Host file %s not found!" %(hosts)
-    sys.exit(1)
+    do_quit(1)
 
   # if platform is not set, take it from copy-from or use "noplatform"
   if platform == None:
@@ -166,7 +180,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata, post_
   platform_path = os.path.join(TESTBED_SCRIPTS_PATH, platform)
   if not os.path.isdir(platform_path):
     print "Platform %s not found!" %(platform)
-    sys.exit(1)
+    do_quit(1)
 
   # if duration is not set, take it from copy-from
   if duration == None:
@@ -183,7 +197,7 @@ def create(name, platform, hosts, copy_from, do_start, duration, metadata, post_
   job_dir = get_job_directory(job_id)
   if job_dir != None:
     print "Job %d already exists! Delete %s before creating a new job." %(job_id, job_dir)
-    sys.exit(1)
+    do_quit(1)
 
   # create user job directory
   job_dir = os.path.join(HOME, "jobs", "%u_%s" %(job_id, name))
@@ -236,7 +250,7 @@ def status():
   curr_date = out.rstrip()
   # check current date on all nodes
   if pssh(os.path.join(TESTBED_SCRIPTS_PATH, "all-hosts"), "check-date.sh %s"%(curr_date), "Testing connectivity with all nodes", inline=True) != 0:
-    sys.exit(1)
+    do_quit(1)
 
 def list():
   all_jobs = {}
@@ -300,7 +314,7 @@ def start(job_id):
   load_job_variables(job_id)
   if os.path.exists(os.path.join(job_dir, ".started")):
     print "Job %d was started before!"%(job_id)
-    sys.exit(1)
+    do_quit(1)
   started = False
   attempt = 1
   while not started and attempt <= MAX_START_ATTEMPTS:
@@ -326,7 +340,7 @@ def start(job_id):
       attempt += 1
   if not started:
     print "Platform start script %s failed after %u attempts."%(start_script_path, attempt)
-    sys.exit(1)
+    do_quit(1)
   # update curr_job file to know that this job is active
   file_write(CURR_JOB_PATH, "%u\n" %(job_id))
   # write start timestamp
@@ -372,7 +386,7 @@ def download():
   download_script_path = os.path.join(TESTBED_SCRIPTS_PATH, platform, "download.py")
   if os.path.exists(download_script_path) and subprocess.call([download_script_path, job_dir]) != 0:
     print "Platform download script %s failed!"%(download_script_path)
-    sys.exit(1)
+    do_quit(1)
   return
 
 def stop(do_force):
@@ -385,7 +399,7 @@ def stop(do_force):
   if os.path.exists(stop_script_path) and subprocess.call([stop_script_path, job_dir]) != 0:
     print "Platform stop script %s failed!"%(stop_script_path)
     if not do_force:
-      sys.exit(1)
+      do_quit(1)
   if not do_no_download:
     # download logs before stopping
     download()
@@ -394,7 +408,7 @@ def stop(do_force):
     print "Rebooting the nodes"
     reboot() # something went probably wrong with serialdump, reboot the nodes
     if not do_force:
-      sys.exit(1)
+      do_quit(1)
   # remove current job-related files
   os.remove(CURR_JOB_PATH)
   # write stop timestamp
@@ -423,7 +437,7 @@ def reboot():
   load_curr_job_variables(False, True)
   # reboot all PI nodes
   if pssh(os.path.join(TESTBED_SCRIPTS_PATH, "all-hosts"), "sudo reboot", "Rebooting the PI nodes") != 0:
-    sys.exit(1)
+    do_quit(1)
   # write history
   ts = timestamp()
   history_message = "%s: %s rebooted the PI nodes. Waiting %u s." %(ts, USER, d)
@@ -473,13 +487,19 @@ def usage():
   print "$testbed.py create --copy-from /usr/testbed/examples/jn516x-hello-world --start     'create and start a JN516x hello-world job'"
   print "$testbed.py stop                                                                    'stop the job and download the logs'"
   print
-  sys.exit(2)
+  do_quit(2)
 
 if __name__=="__main__":
 
+  if lock_is_taken():
+      print "Lock is taken. Try a gain in a few seconds."
+      sys.exit(1)
+  else:
+      lock_aquire()
+
   if len(sys.argv)<2:
     usage()
-    sys.exit(1)
+    do_quit(1)
 
   try:
     opts, args = getopt.getopt(sys.argv[2:], "", ["name=", "platform=", "hosts=", "copy-from=", "duration=", "job-id=", "start", "force", "no-download", "start-next", "metadata=", "post-processing="])
@@ -529,6 +549,6 @@ if __name__=="__main__":
   elif command == "reboot":
       reboot()
   else:
-    usage()
+      usage()
 
-  sys.exit(0)
+  do_quit(0)
