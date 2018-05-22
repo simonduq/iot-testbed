@@ -83,7 +83,6 @@ def run(task):
     flagsStr = " ".join(["%s=%s"%(x[0],x[1]) for x in setupData["flags"].items()]) if "flags" in setupData else ""
     log("Building")
     os.system("make TARGET=zoul BOARD=firefly-reva %s clean node" %(flagsStr))
-    #os.system("sudo docker run --mount type=bind,source=%s,destination=/home/user/contiki-ng -ti simonduq/contiki-ng bash -c 'make -C %s TARGET=zoul BOARD=firefly-reva %s clean node'" %(PATH_CONTIKI_NG, setupData["xppath"], flagsStr))
     # Check if file was built
     if os.path.isfile("node.zoul"):
         # Create directory that contains the run data
@@ -145,7 +144,6 @@ def main():
     # Start jobs
     log("Starting jobs.")
     os.system("testbed.py start --nested")
-    log("Started jobs.")
 
     do_quit(0)
 
