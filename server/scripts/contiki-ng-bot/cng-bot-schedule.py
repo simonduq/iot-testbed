@@ -65,6 +65,7 @@ def run(task):
     setup = task["setup"]
     repository = setupData["repository"]
     branch = setupData["branch"]
+    log("Preparing")
     # Go to Contiki-NG
     os.chdir(PATH_CONTIKI_NG)
     # Add remote
@@ -80,6 +81,7 @@ def run(task):
     os.chdir(setupData["xppath"])
     # Build
     flagsStr = " ".join(["%s=%s"%(x[0],x[1]) for x in setupData["flags"].items()]) if "flags" in setupData else ""
+    log("Building")
     os.system("make TARGET=zoul BOARD=firefly-reva %s clean node" %(flagsStr))
     #os.system("sudo docker run --mount type=bind,source=%s,destination=/home/user/contiki-ng -ti simonduq/contiki-ng bash -c 'make -C %s TARGET=zoul BOARD=firefly-reva %s clean node'" %(PATH_CONTIKI_NG, setupData["xppath"], flagsStr))
     # Check if file was built
@@ -94,6 +96,7 @@ def run(task):
         shutil.copyfile("parse.py", os.path.join(setup, "parse.py"))
         # Copy firmware
         shutil.copyfile("node.zoul", os.path.join(setup, "node.zoul"))
+        log("Scheduling")
         # Create testbed job
         os.system("testbed.py create --platform zoul --copy-from %s --duration=%u --post-processing=%s --nested"%(setup, setupData["duration"], PATH_POST_PROCESSING))
         # Clean up
@@ -117,6 +120,7 @@ def main():
         do_quit(1)
         return
 
+    log("CNG bot starting.")
     # save original working dir
     owd = os.getcwd()
     # read task list
@@ -132,13 +136,14 @@ def main():
 
     for i in range(runCount):
         index = (lastrun + 1 + i) % len(taskList)
-        log("Creating job %u" %(index))
+        log("Building and scheduling job %u" %(index))
         run(taskList[index])
         os.chdir(owd)
         with open(PATH_LASTRUN, 'w') as f:
             f.write("%u\n"%(index))
 
     # Start jobs
+    log("Starting jobs.")
     os.system("testbed.py start --nested")
     log("Started jobs.")
 

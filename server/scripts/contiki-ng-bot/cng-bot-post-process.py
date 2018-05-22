@@ -66,6 +66,10 @@ def main():
 
     taskData = yaml.load(open(os.path.join(dir, "task.yml"), "r"))
 
+    # Update github pages repository
+    os.chdir(PATH_GITHUBIO)
+    os.system("git pull origin master")
+
     # Generate .md file for the run
     githubPagesMdPath = os.path.join(PATH_GITHUBIO, "_runs", "%u.md"%(jobId))
     outFile = open(githubPagesMdPath, "w")
@@ -99,8 +103,7 @@ def main():
     githubPageLogPath = os.path.join(PATH_GITHUBIO, "_logs", "%u.txt"%(jobId))
     shutil.copyfile(os.path.join(dir, "logs", "log.txt"), githubPageLogPath)
 
-    # Git ass new files
-    os.chdir(PATH_GITHUBIO)
+    # Git add new files and push
     os.system("git add %s" %(githubPagesMdPath))
     os.system("git add %s" %(githubPageLogPath))
     os.system("git commit -m 'Reuslts for job %u (%s)'" %(jobId, taskData["setup"]))

@@ -531,7 +531,7 @@ if __name__=="__main__":
        post_processing = value
    elif opt == "--metadata":
        metadata = value
-   elif opt == "--force":
+   elif opt == "--nested":
        is_nested = True
 
   if not is_nested and lock_is_taken():
