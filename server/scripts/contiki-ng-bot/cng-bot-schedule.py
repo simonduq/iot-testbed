@@ -140,7 +140,6 @@ def main():
 
     # Start jobs
     os.system("testbed.py start --nested")
-    os.remove(PATH_ABORTED)
     log("Started jobs.")
 
     do_quit(0)
