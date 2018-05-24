@@ -67,7 +67,7 @@ def main():
     try:
         parsingRet = subprocess.check_output(["python3", os.path.join(dir, "parse.py"), logFile])
     except subprocess.CalledProcessError as e:
-        log("Parsing failed")
+        log("Parsing failed. Aborting.")
         return
 
     date = open(os.path.join(dir, ".started"), 'r').readlines()[0].strip()
@@ -106,10 +106,15 @@ def main():
     outFile.flush()
 
     # Copy logs to github parseEnergest
-    githubPageLogPath = os.path.join(PATH_GITHUBIO, "_logs", "%u.txt"%(jobId))
-    shutil.copyfile(os.path.join(dir, "logs", "log.txt"), githubPageLogPath)
+    # Update github pages repository
+    os.chdir(os.path.join(dir, "logs"))
+    shutil.move("log.txt", "%u.txt"%(jobId))
+    githubPageLogPath = os.path.join(PATH_GITHUBIO, "_logs", "%u.zip"%(jobId))
+    os.system("zip %s %s" %(githubPageLogPath, "%u.txt" %(jobId)))
 
     # Git add new files and push
+    # Update github pages repository
+    os.chdir(PATH_GITHUBIO)
     os.system("git add %s" %(githubPagesMdPath))
     os.system("git add %s" %(githubPageLogPath))
     os.system("git commit -m 'Reuslts for job %u (%s)'" %(jobId, taskData["setup"]))
