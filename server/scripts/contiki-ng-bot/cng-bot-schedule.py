@@ -22,20 +22,23 @@ PATH_LASTRUN = expanduser("~")+"/cng-bot/last_run"
 PATH_HISTORY = expanduser("~")+"/cng-bot/history"
 
 # Example tasklist.yml:
-#- setup: test-csma
-#  duration: 120
-#- setup: test-tsch
-#  duration: 120
-#- setup: test-tsch-optims
-#  duration: 120
-#- setup: other
-#  duration: 120
-#  label: A custom run
-#  repository: simonduq/contiki-ng
-#  branch: wip/testbed
-#  xppath: examples/benchmarks/rpl-req-resp
-#  flags:
-#    CONFIG: CONFIG_CSMA
+#tasks-per-execution: 2
+#allow-repeat: true
+#tasks:
+#  - setup: test-csma
+#    duration: 120
+#  - setup: test-tsch
+#    duration: 120
+#  - setup: test-tsch-optims
+#    duration: 120
+#  - setup: other
+#    duration: 120
+#    label: A custom run
+#    repository: simonduq/contiki-ng
+#    branch: wip/testbed
+#    xppath: examples/benchmarks/rpl-req-resp
+#    flags:
+#      CONFIG: CONFIG_CSMA
 
 def lock_is_taken():
     return os.path.exists(LOCK_PATH)
