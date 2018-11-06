@@ -16,7 +16,7 @@ PATH_CURR_JOB = os.path.join(TESTBED_PATH, "curr_job")
 PATH_POST_PROCESSING = os.path.join(TESTBED_PATH, "scripts/contiki-ng-bot/cng-bot-parse-script.sh")
 
 PATH_CONTIKI_NG = expanduser("~")+"/contiki-ng"
-PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
+PATH_GITHUBIO = expanduser("~")+"/contiki-ng.github.io"
 PATH_TASKLIST = expanduser("~")+"/cng-bot/tasklist.yml"
 PATH_LASTRUN = expanduser("~")+"/cng-bot/last_run"
 PATH_HISTORY = expanduser("~")+"/cng-bot/history"

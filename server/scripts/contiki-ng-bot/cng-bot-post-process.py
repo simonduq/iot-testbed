@@ -16,7 +16,7 @@ from collections import OrderedDict
 from IPython import embed
 from os.path import expanduser
 
-PATH_GITHUBIO = expanduser("~")+"/simonduq.github.io"
+PATH_GITHUBIO = expanduser("~")+"/contiki-ng.github.io"
 PATH_JOBS = expanduser("~")+"/jobs"
 PATH_HISTORY = expanduser("~")+"/cng-bot/history"
 
