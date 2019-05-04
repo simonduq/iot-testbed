@@ -39,6 +39,15 @@ PATH_HISTORY = expanduser("~")+"/cng-bot/history"
 #    xppath: examples/benchmarks/rpl-req-resp
 #    flags:
 #      CONFIG: CONFIG_CSMA
+#  - setup: other
+#    duration: 120
+#    label: A custom run, by commit hash
+#    repository: contiki-ng/contiki-ng
+#    commit: 4928a5e1e035d42313b0e3ed73e14565d972510b
+#    xppath: examples/benchmarks/rpl-req-resp
+#    flags:
+#      CONFIG: CONFIG_CSMA
+#
 
 def lock_is_taken():
     return os.path.exists(LOCK_PATH)
@@ -67,16 +76,21 @@ def run(task):
     setupData.update(task)
     setup = task["setup"]
     repository = setupData["repository"]
-    branch = setupData["branch"]
+    branch = setupData["branch"] if "branch" in setupData else None
+    commit = setupData["commit"] if "commit" in setupData else None
     log("Preparing")
     # Go to Contiki-NG
     os.chdir(PATH_CONTIKI_NG)
     # Add remote
     os.system("git remote add %s git@github.com:%s.git\n"%(repository, repository))
     # Fetch and check out branch
-    os.system("git fetch %s %s\n"%(repository, branch))
-    os.system("git checkout %s/%s\n"%(repository, branch))
-    os.system("git reset --hard %s/%s\n"%(repository, branch))
+    os.system("git fetch %s\n"%(repository))
+    if commit is None:
+        os.system("git checkout %s/%s\n"%(repository, branch))
+        os.system("git reset --hard %s/%s\n"%(repository, branch))
+    else:
+        os.system("git checkout %s\n"%(commit))
+        os.system("git reset --hard %s\n"%(commit))
     os.system("git clean -fd\n")
     # Get git commit hash
     task["commit"] = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode("utf-8")
